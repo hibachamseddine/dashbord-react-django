@@ -5,6 +5,19 @@ class Employee(models.Model):
     role = models.CharField(max_length=100)
     productivity_score = models.DecimalField(max_digits=5, decimal_places=2)
     absences = models.IntegerField()
+    status = models.CharField(max_length=20, default='Actif')
+    
+    SEXE_CHOICES = [
+        ('M', 'Homme'),
+        ('F', 'Femme'),
+        
+    ]
+    sexe = models.CharField(max_length=1, choices=SEXE_CHOICES,default='F')
+    photo = models.ImageField(upload_to='employees/', blank=True)
+
+    age = models.IntegerField()
+    email = models.EmailField(max_length=100, unique=True) 
+    
     class Meta:
         db_table = 'employee'
 
@@ -25,7 +38,7 @@ class Project(models.Model):
     project_budget = models.DecimalField(max_digits=10, decimal_places=2)
     budget_used = models.DecimalField(max_digits=10, decimal_places=2)
     status = models.CharField(max_length=50)
-    manager = models.ForeignKey('Employee', on_delete=models.CASCADE, related_name='managed_projects')
+    manager_id = models.ForeignKey('Employee', on_delete=models.CASCADE, related_name='managed_projects')
     class Meta:
         db_table = 'project'
 
