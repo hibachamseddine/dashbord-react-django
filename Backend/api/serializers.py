@@ -5,18 +5,25 @@ from .models import Availability, EmployeeProject, Notification, Project, Employ
 
 
 class ProjectSerializer(serializers.ModelSerializer):
-    manager = serializers.StringRelatedField()  # Affiche le nom du responsable au lieu de l'ID
+    manager = serializers.PrimaryKeyRelatedField(queryset=Employee.objects.exclude(role='manager'))
 
     class Meta:
         model = Project
         fields = '__all__'
-
+        
+  
 
 class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
         fields = '__all__'
-
+        
+    def get_photo_url(self,obj):
+        request = self.context.get('request')
+        photo_url=obj.fingerprint.url
+        return request.build_absolute_uri(photo_url)
+        
+   
 
 class AvailabilitySerializer(serializers.ModelSerializer):
     employee = EmployeeSerializer()
