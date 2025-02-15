@@ -7,68 +7,86 @@ const EmployeDashboard = () => {
   const [kpi, setKpi] = useState(null);
   const [employees, setEmployees] = useState([]);
   const [error, setError] = useState(null);
-  const updatePhoto = async (employeeId, file) => {
-    const formData = new FormData();
-    formData.append("photo", file);
-  
+
+  const fetchEmployeeData = async () => {
     try {
-      const response = await axios.put(
-        `http://127.0.0.1:8000/api/employee/update/${employeeId}/`,
-        formData,
-        {
-          headers: { "Content-Type": "multipart/form-data" },
-        }
-      );
-      console.log("Photo mise à jour :", response.data);
-    } catch (error) {
-      console.error("Erreur lors de la mise à jour :", error);
+      const response = await axios.get("http://127.0.0.1:8000/api/employees/");
+      setEmployees(response.data);
+    } catch (err) {
+      setError("Erreur de chargement des employés");
     }
   };
+  const removeEmployeeLocally = (employeeId) => {
+    setEmployees(prevEmployees => prevEmployees.filter(emp => emp.id !== employeeId));
+  };
   
-  // Fetch KPI data and employee data
+  
+  
   useEffect(() => {
+
+    fetchEmployeeData();
     const fetchKpiData = async () => {
       try {
-        const response = await axios.get("http://127.0.0.1:8000/api/kpi/"); // Adjust the API endpoint if needed
-        setKpi(response.data);  // Ensure that the response contains KPI data
+        const response = await axios.get("http://127.0.0.1:8000/api/kpi/");
+        setKpi(response.data);
       } catch (err) {
         setError("Erreur de chargement des KPI");
       }
     };
 
-    const fetchEmployeeData = async () => {
-      try {
-        const response = await axios.get("http://127.0.0.1:8000/api/employees/"); // Endpoint to fetch employee data
-        setEmployees(response.data);
-      } catch (err) {
-        setError("Erreur de chargement des employés");
+    fetchKpiData();
+
+
+    const socket = new WebSocket("ws://127.0.0.1:8000/ws/employees/");
+
+    socket.onopen = () => {
+      console.log("✅ WebSocket connecté !");
+    };
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      if (data.type === "update") {
+        console.log("🔄 Mise à jour reçue :", data.message);
+        fetchEmployeeData(); // 🔄 Rafraîchir les employés automatiquement
+      } else if (data.type === "delete") {
+        console.log(`🗑️ Suppression de l'employé ID: ${data.employee_id}`);
+        removeEmployeeLocally(data.employee_id);
+        fetchEmployeeData(); 
       }
     };
 
-    fetchKpiData();
-    fetchEmployeeData();
+    socket.onerror = (error) => {
+      console.error("❌ WebSocket Erreur :", error);
+    };
 
-    const intervalId = setInterval(() => {
-      fetchKpiData();
-      fetchEmployeeData();
-    }, 10000); // Fetch data every 10 seconds
+    socket.onclose = () => {
+      console.log("❌ WebSocket fermé !");
+    };
 
-    return () => clearInterval(intervalId);
+    return () => socket.close();
   }, []);
+
+
+
+  const handleDelete = async (id) => {
+    try {
+      await axios.delete(`http://127.0.0.1:8000/api/employees/${id}/`);
+      console.log(`✅ Employé ${id} supprimé !`);
+      // ❌ PAS BESOIN de fetchEmployeeData() car WebSocket mettra à jour React
+    } catch (err) {
+      console.error("❌ Erreur lors de la suppression :", err);
+    }
+  };
 
   if (error) return <p style={{ color: "red" }}>{error}</p>;
   if (!kpi || !employees.length) return <p>⚠️ Aucune donnée disponible.</p>;
 
-
-
   return (
     <div className="dashboardContainer">
-      {/* Display KPI */}
       <div className="kpiContainer">
-        <EmployeKPI kpi={kpi} />  {/* Pass the KPI data to the EmployeKPI component */}
+        <EmployeKPI kpi={kpi} />
       </div>
 
-      {/* Display Employee Data in a Table */}
       <div className="employeeTableContainer">
         <h3>📋 Liste des Employés</h3>
         <table className="employeeTable">
@@ -95,15 +113,15 @@ const EmployeDashboard = () => {
                 <td>{emp.age}</td>
                 <td>{emp.email}</td>
                 <td>
-  {emp.photo ? (
-    <img src={`http://127.0.0.1:8000${emp.photo}`} alt="photo" width={50} height={50} />
-  ) : (
-    <span>Pas de photo</span>
-  )}
-</td>
-
-
-
+                  {emp.photo ? (
+                    <img src={emp.photo} alt="photo" width={50} height={50} />
+                  ) : (
+                    <span>Pas de photo</span>
+                  )}
+                </td>
+                <td>
+                <button onClick={() => handleDelete(emp.id)}>❌ Supprimer</button>
+                </td>
               </tr>
             ))}
           </tbody>

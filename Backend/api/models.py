@@ -1,11 +1,23 @@
 from django.db import models
+from channels.layers import get_channel_layer
+from asgiref.sync import async_to_sync
+import json
+
 
 class Employee(models.Model):
     name = models.CharField(max_length=255)
     role = models.CharField(max_length=100)
     productivity_score = models.DecimalField(max_digits=5, decimal_places=2)
     absences = models.IntegerField()
-    status = models.CharField(max_length=20, default='Actif')
+    
+    STATUS_CHOICES = [
+        ('Travaille', 'Travaille'),
+        ('Sortie', 'Sortie'),
+        ('Congé', 'Congé'),
+    ]
+    
+    
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='Travaille')
     
     SEXE_CHOICES = [
         ('M', 'Homme'),
@@ -26,6 +38,27 @@ class Employee(models.Model):
     def __str__(self):
         return self.name
     
+    def save(self, *args, **kwargs):
+            super().save(*args, **kwargs)
+            channel_layer = get_channel_layer()
+            async_to_sync(channel_layer.group_send)(
+                "employees",
+                {
+                    "type": "broadcast_employee",
+                    "employee": {
+                        "id": self.id,
+                        "name": self.name,
+                        "role": self.role,
+                        "productivity_score": self.productivity_score,
+                        "absences": self.absences,
+                        "status": self.status,
+                        "age": self.age,
+                        "email": self.email,
+                        "photo": self.photo,
+                    }
+                }
+            )
+    
     
 
 class Project(models.Model):
@@ -37,8 +70,14 @@ class Project(models.Model):
     hours_worked = models.IntegerField()
     project_budget = models.DecimalField(max_digits=10, decimal_places=2)
     budget_used = models.DecimalField(max_digits=10, decimal_places=2)
-    status = models.CharField(max_length=50)
-    manager_id = models.ForeignKey('Employee', on_delete=models.CASCADE, related_name='managed_projects')
+    STATUS_CHOICES = [
+        ('En cours', 'En cours'),
+        ('Terminé', 'Terminé'),
+    ]
+    
+    # Champ de statut avec des valeurs possibles
+    status = models.CharField(max_length=50, choices=STATUS_CHOICES)
+    manager = models.ForeignKey('Employee', on_delete=models.CASCADE, related_name='managed_projects')
     class Meta:
         db_table = 'project'
 

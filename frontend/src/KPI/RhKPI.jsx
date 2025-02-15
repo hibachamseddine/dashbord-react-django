@@ -14,8 +14,8 @@ const RhKPI = ({ kpi }) => {
           <p className="label">Actifs</p>
         </div>
         <div className="valueCard">
-          <div className="square">{kpi.employes_inactifs}</div>
-          <p className="label">Inactifs</p>
+          <div className="square">{kpi.employes_Sortis}</div>
+          <p className="label">Sortis</p>
         </div>
         <div className="valueCard">
           <div className="square">{kpi.employes_en_conge}</div>
