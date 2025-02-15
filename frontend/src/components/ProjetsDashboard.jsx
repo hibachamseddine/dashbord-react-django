@@ -27,15 +27,37 @@ const ProjetsDashboard = () => {
 
     fetchKpiData();
     
-    const intervalId = setInterval(fetchKpiData, 10000); // Vérification sans rechargement
-    return () => clearInterval(intervalId);
+    const socket = new WebSocket("ws://127.0.0.1:8000/ws/projects/");
+
+    socket.onopen = () => {
+      console.log("✅ WebSocket connecté !");
+    };
+
+    socket.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+      
+      console.log("🔄 Mise à jour reçue :", data.message);
+      
+      fetchKpiData();
+      
+    };
+
+    socket.onerror = (error) => {
+      console.error("❌ WebSocket Erreur :", error);
+    };
+
+    socket.onclose = () => {
+      console.log("❌ WebSocket fermé !");
+    };
+
+    return () => socket.close();
   }, []);
 
   if (error) return <p style={{ color: "red" }}>{error}</p>;
   if (!kpi) return <p>⚠️ Aucune donnée disponible.</p>;
 
   const projetsData = [
-    { name: "Terminés", value: kpi.projets_termines },
+    { name: "Terminé", value: kpi.projets_termines },
     { name: "En cours", value: kpi.projets_en_cours }
   ];
 

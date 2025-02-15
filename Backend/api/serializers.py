@@ -5,12 +5,13 @@ from .models import Availability, EmployeeProject, Notification, Project, Employ
 
 
 class ProjectSerializer(serializers.ModelSerializer):
-    manager = serializers.StringRelatedField()  # Affiche le nom du responsable au lieu de l'ID
+    manager = serializers.PrimaryKeyRelatedField(queryset=Employee.objects.exclude(role='manager'))
 
     class Meta:
         model = Project
         fields = '__all__'
-
+        
+  
 
 class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
